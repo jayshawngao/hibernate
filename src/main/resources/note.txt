@@ -720,13 +720,38 @@ HQL 采用 ORDER BY 关键字对查询结果排序
 		sum()
 		avg()
 
-HQL (迫切)左外连接：
+HQL (迫切)左外连接：[以Department和Employee举例，它们是1-n的关系]
 迫切左外连接:
 	LEFT JOIN FETCH 关键字表示迫切左外连接检索策略.
-	list() 方法返回的集合中存放实体对象的引用, 每个 Department 对象关联的 Employee  集合都被初始化, 存放所有关联的 Employee 的实体对象. 
-	查询结果中可能会包含重复元素, 可以通过一个 HashSet 来过滤重复元素
+	list() 方法返回的集合中存放实体对象的引用, 每个 Department 对象关联的 Employee集合都被初始化, 存放所有关联的 Employee 的实体对象. 
+	查询结果中可能会包含重复元素：
+	1）可以通过一个 HashSet 来过滤重复元素
+	String hql = "FROM Department d LEFT JOIN FETCH d.emps"
+	Query query = session.createQuery(hql);
+	List<Department> depts = query.list();
+	depts = new ArrayList<>(new LinkedHashSet(depts)); 
+	2）可以通过 DISTINCT 关键字来保证查询结果不会返回重复元素
+	String hql = "SELECT DISTINCT d FROM Department d LEFT JOIN FETCH d.emps" 
+	Query query = session.createQuery(hql); 
+	List<Department> depts = query.list();
 左外连接:
 	LEFT JOIN 关键字表示左外连接查询. 
 	list() 方法返回的集合中存放的是对象数组类型
 	根据配置文件来决定 Employee 集合的检索策略. 
 	如果希望 list() 方法返回的集合中仅包含 Department 对象, 可以在HQL 查询语句中使用 SELECT 关键字
+
+HQL (迫切)内连接：
+迫切内连接:
+	INNER JOIN FETCH 关键字表示迫切内连接, 也可以省略 INNER 关键字
+	list() 方法返回的集合中存放 Department 对象的引用, 每个 Department 对象的 Employee 集合都被初始化, 存放所有关联的 Employee 对象
+内连接:
+	INNER JOIN 关键字表示内连接, 也可以省略 INNER 关键字
+	list() 方法的集合中存放的每个元素对应查询结果的一条记录, 每个元素都是对象数组类型
+	如果希望 list() 方法的返回的集合仅包含 Department  对象, 可以在 HQL 查询语句中使用 SELECT 关键字
+
+关联级别运行时的检索策略：
+	如果在 HQL 中没有显式指定检索策略, 将使用映射文件配置的检索策略. 
+	HQL 会忽略映射文件中设置的迫切左外连接检索策略, 如果希望 HQL 采用迫切左外连接策略, 就必须在 HQL 查询语句中显式的指定它
+	若在 HQL 代码中显式指定了检索策略, 就会覆盖映射文件中配置的检索策略
+
+Hibernate 二级缓存:
