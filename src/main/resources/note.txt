@@ -69,10 +69,10 @@ Transaction(事务):
 		commit():提交相关联的session实例
 		rollback():撤销事务操作
 		wasCommitted():检查事务是否提交
-hbm2ddl.auto：该属性可帮助程序员实现正向工程, 即由 java 代码生成数据库脚本, 进而生成具体的表结构. 。取值 create | update | create-drop | validate
-	create : 会根据 .hbm.xml  文件来生成数据表, 但是每次运行都会删除上一次的表 ,重新生成表, 哪怕二次没有任何改变 
+hbm2ddl.auto：该属性可帮助程序员实现正向工程, 即由 java 代码生成数据库脚本, 进而生成具体的表结构. 取值 create | update | create-drop | validate
+	create : 会根据 .hbm.xml  文件来生成数据表, 但是每次运行都会删除上一次的表 ,重新生成表, 哪怕没有任何改变 
 	create-drop : 会根据 .hbm.xml 文件生成表,但是SessionFactory一关闭, 表就自动删除 
-	update : 最常用的属性值，也会根据 .hbm.xml 文件生成表, 但若 .hbm.xml  文件和数据库中对应的数据表的表结构不同, Hiberante  将更新数据表结构，但不会删除已有的行和列 
+	update : 最常用的属性值，也会根据 .hbm.xml 文件生成表, 但若 .hbm.xml  文件和数据库中对应的数据表的表结构不同, Hiberante将更新数据表结构，但不会删除已有的行和列 
 	validate : 会和数据库中的表进行比较, 若 .hbm.xml 文件中的列在数据表中不存在，则抛出异常
 
 Session 概述:
@@ -307,7 +307,426 @@ sequence 标识符生成器:
 	适用范围:
 		由于 sequence 生成标识符的机制依赖于底层数据库系统的序列, 因此, 要求底层数据库系统必须支持序列. 支持序列的数据库包括: DB2, Oracle 等
 		OID 必须为 long, int 或 short 类型, 如果把 OID 定义为 byte 类型, 在运行时会抛出异常
-	
+hilo 标识符生成器:
+	hilo 标识符生成器由 Hibernate 按照一种 high/low 算法*生成标识符, 它从数据库的特定表的字段中获取 high 值.
+		<id name="id">
+			<generator class="hilo">
+				<param name="table">HI_TABLE</param>
+				<param name="column">NEXT_VALUE</param>
+				<param name="max_lo">10</param>
+			</generator>
+		</id>
+	Hibernate 在持久化一个 News 对象时, 由 Hibernate 负责生成主键值. hilo 标识符生成器在生成标识符时, 需要读取并修改 HI_TABLE 表中的 NEXT_VALUE 值.
+	适用范围:
+	由于 hilo 生存标识符机制不依赖于底层数据库系统, 因此它适合所有的数据库系统
+	OID 必须为 long, int 或 short 类型, 如果把 OID 定义为 byte 类型, 在运行时会抛出异常
+native 标识符生成器:
+	native 标识符生成器依据底层数据库对自动生成标识符的支持能力, 来选择使用 identity, sequence 或 hilo 标识符生成器. 
+	适用范围:
+		由于 native 能根据底层数据库系统的类型, 自动选择合适的标识符生成器, 因此很适合于跨数据库平台开发
+		OID 必须为 long, int 或 short 类型, 如果把 OID 定义为 byte 类型, 在运行时会抛出异常
+Property:
+	property 元素用于指定类的属性和表的字段的映射
+	name:指定该持久化类的属性的名字
+	column:指定与类的属性映射的表的字段名. 如果没有设置该属性, Hibernate 将直接使用类的属性名作为字段名. 
+	type:指定 Hibernate 映射类型. Hibernate 映射类型是 Java 类型与 SQL 类型的桥梁. 如果没有为某个属性显式设定映射类型, Hibernate 会运用反射机制先识别出持久化类的特定属性的 Java 类型, 然后自动使用与之对应的默认的 Hibernate 映射类型.
+	not-null:若该属性值为 true, 表明不允许为 null, 默认为 false
+	access:指定 Hibernate 的默认的属性访问策略。默认值为 property, 即使用 getter, setter 方法来访问属性. 若指定 field, 则 Hibernate 会忽略 getter/setter 方法, 而通过反射访问成员变量
+	unique: 设置是否为该属性所映射的数据列添加唯一约束. 
+	index: 指定一个字符串的索引名称. 当系统需要 Hibernate 自动建表时, 用于为该属性所映射的数据列创建索引, 从而加快该数据列的查询.
+	length: 指定该属性所映射数据列的字段的长度
+	scale: 指定该属性所映射数据列的小数位数, 对 double, float, decimal 等类型的数据列有效.
+	formula：设置一个 SQL 表达式, Hibernate 将根据它来计算出派生属性的值. 
+	派生属性: 并不是持久化类的所有属性都直接和表的字段匹配, 持久化类的有些属性的值必须在运行时通过计算才能得出来, 这种属性称为派生属性
+链接: /image/Java 类型, Hibernate 映射类型及 SQL 类型之间的对应关系.png			
 		
+Java 时间和日期类型的 Hibernate 映射: 链接:/image/Java 时间和日期类型的 Hibernate 映射.png
+	1.在 Java 中, 代表时间和日期的类型包括: java.util.Date 和 java.util.Calendar. 
+	2.此外, 在 JDBC API 中还提供了 3 个扩展了 java.util.Date 类的子类: java.sql.Date, java.sql.Time 和 java.sql.Timestamp, 这三个类分别和标准 SQL 类型中的 DATE, TIME 和 TIMESTAMP 类型对应
+	    在标准 SQL 中, DATE 类型表示日期, TIME 类型表示时间, TIMESTAMP 类型表示时间戳, 同时包含日期和时间信息. 
+	3.基于第2条, 所以设置持久化Date类型时, 设置为java.util.Date, 因为它是其他日期类型的父类.
+Java 大对象类型的 Hiberante 映射:
+	1.在 Java 中, java.lang.String 可用于表示长字符串(长度超过 255), 字节数组 byte[] 可用于存放图片或文件的二进制数据. 此外, 在 JDBC API 中还提供了 java.sql.Clob 和 java.sql.Blob 类型, 它们分别和标准 SQL 中的 CLOB 和 BLOB 类型对应. CLOB 表示字符串大对象(Character Large Object), BLOB表示二进制对象(Binary Large Object)
+	2.Mysql 不支持标准 SQL 的 CLOB 类型, 在 Mysql 中, 用 TEXT, MEDIUMTEXT 及 LONGTEXT 类型来表示长度操作 255 的长文本数据
+	3.在持久化类中, 二进制大对象可以声明为 byte[] 或 java.sql.Blob 类型; 字符串可以声明为 java.lang.String 或 java.sql.Clob
+	4.实际上在 Java 应用程序中处理长度超过 255 的字符串, 使用 java.lang.String 比 java.sql.Clob 更方便
+	5.若希望精确映射SQL类型, 可以使用sql-type属性, 并且不需要再写property的type属性
+		<property name="content">
+			<column name="CONTENT" sql-type="mediumtext"></column>
+		</property>
+
+
+
+先看一下概念:Hibernate 把持久化类的属性分为两种: 
+	值(value)类型: 没有 OID, 不能被单独持久化, 生命周期依赖于所属的持久化类的对象的生命周期
+	实体(entity)类型: 有 OID, 可以被单独持久化, 有独立的生命周期
+组件映射:
+	当一个类中某个字段是另一个类的对象,但是又需要将该类映射到数据表中, 就需要使用component来进行映射,这个是值类型,因为数据库并没有一张表对应着pay这个类:
+	<hibernate-mapping package="com.atguigu.hibernate.entities">
+	    <class name="Worker" table="WORKER">
+	        <id name="id" type="java.lang.Integer">
+	            <column name="ID" />
+	            <generator class="native" />
+	        </id>
+	        <property name="name" type="java.lang.String">
+	            <column name="NAME" />
+	        </property>
+	        
+	        <!-- 映射组成关系 -->
+	        <component name="pay" class="Pay">
+	        	<parent name="worker"/>
+	        	<!-- 指定组成关系的组件的属性 -->
+	        	<property name="monthlyPay" column="MONTHLY_PAY"></property>
+	        	<property name="yearPay" column="YEAR_PAY"></property>
+	        	<property name="vocationWithPay" column="VOCATION_WITH_PAY"></property>
+	        </component>
+	    </class>
+	</hibernate-mapping>
+
+单向n-1映射:这个是实体类型映射, 就不能使用component了, 因为数据库中既有表customer ,又有order.
+单向 n-1:
+	单向 n-1 关联只需从 n 的一端可以访问 1 的一端
+	域模型: 从 Order 到 Customer 的n-1单向关联需要在Order 类中定义一个 Customer 属性, 而在 Customer 类中无需定义存放 Order 对象的集合属性
+	关系数据模型:ORDERS 表中的 CUSTOMER_ID 参照 CUSTOMER 表的主键
+	Hibernate 使用 <many-to-one> 元素来映射n-1关联关系
+	<!-- 这段配置放在Order中 -->
+	<many-to-one 
+		name="customer"
+		class="Customer"
+		column ="CUSTOMER_ID"
+		not-null="true">
+	</many-to-one>
+
+双向 1-n:
+	双向 1-n 与 双向 n-1 是完全相同的两种情形
+	双向 1-n 需要在 1 的一端可以访问 n 的一端, 反之依然.
+	域模型:从 Order 到 Customer 的n-1双向关联需要在Order 类中定义一个 Customer 属性, 而在 Customer 类中需定义存放 Order 对象的集合属性
+	关系数据模型:ORDERS 表中的 CUSTOMER_ID 参照 CUSTOMER 表的主键
+	当 Session 从数据库中加载 Java 集合时, 创建的是 Hibernate 内置集合类的实例, 因此在持久化类中定义集合属性时必须把属性声明为 Java 接口类型
+		Hibernate 的内置集合类具有集合代理功能, 支持延迟检索策略
+		事实上, Hibernate 的内置集合类封装了 JDK 中的集合类, 这使得 Hibernate 能够对缓存中的集合对象进行脏检查, 按照集合对象的状态来同步更新数据库。
+	在定义集合属性时, 通常把它初始化为集合实现类的一个实例. 这样可以提高程序的健壮性, 避免应用程序访问取值为 null 的集合的方法抛出 NullPointerException
+	Hibernate 使用 <set> 元素来映射 set 类型的属性:
+		<!-- 这段配置放在Customer中 -->
+		<set name="orders">
+			<key column="CUSTOMER_ID"></key>
+			<one-to-many class="Order"/>
+		</set>
+		"<key>元素"设定与所关联的持久化类对应的表的外键
+			column: 指定关联表的外键名
+<set> 元素的 inverse 属性:
+	在hibernate中通过对 inverse 属性的来决定是由双向关联的哪一方来维护表和表之间的关系. inverse = false 的为主动方，inverse = true 的为被动方, 由主动方负责维护关联关系
+	在没有设置 inverse=true 的情况下，父子两边都维护父子关系 
+	在 1-n 关系中，将 n 方设为主控方将有助于性能改善(如果要国家元首记住全国人民的名字，不是太可能，但要让全国人民知道国家元首，就容易的多)
+	在 1-N 关系中，若将 1 方设为主控方
+		会额外多出 update 语句。
+		插入数据时无法同时插入外键列，因而无法为外键列添加非空约束
+	并且在插入时, 先插入1的一端, 再插入n的一端, 这样不会产生update语句.
 	
+cascade 属性:
+	在对象 – 关系映射文件中, 用于映射持久化类之间关联关系的元素, <set>, <many-to-one> 和 <one-to-one> 都有一个 cascade 属性, 它用于指定如何操纵与当前对象关联的其他对象. 
+	实际开发中不建议设置该属性
+
+在数据库中对集合排序:
+	<set> 元素有一个 order-by 属性, 如果设置了该属性, 当 Hibernate 通过 select 语句到数据库中检索集合对象时, 利用 order by 子句进行排序
+	order-by 属性中还可以加入 SQL 函数
 	
+映射1-1关联关系:[有两种, 基于外键映射的 1-1和基于主键映射的 1-1]
+假设现在有两个类, Department和Manager , 它们之间是1-1的关系
+1.基于外键映射的 1-1:
+	对于基于外键的1-1关联，其外键可以存放在任意一边，在需要存放外键一端，增加many-to-one元素。为many-to-one元素增加unique=“true” 属性来表示为1-1关联
+		<many-to-one name="manager" class="Manager" column="MANAGER_ID"
+			cascade="all" unique="true"/>
+	另一端需要使用one-to-one元素，该元素使用 property-ref 属性指定使用被关联实体主键以外的字段作为关联字段
+		<one-to-one name="dept" class="Department" property-ref="manager" />
+		在查询没有外键的实体对象时,默认是以主键来进行左外连接查询, 默认条件是manger.manager_id=department.department_id, 加了property-ref="manager"就会改成manger.manager_id=department.manager_id
+
+	[注意:在查询没有外键的实体对象时, 使用左外连接查询, 一并查出其关联的对象, 并进行初始化]
+	这里有几个问题?
+	1. 什么是没有外键的实体对象?
+		在Manager表中, 并没有一列Department_Id
+	2. 为什么要一并查出, 而不是使用延迟加载?
+		正是因为Manager表中不存在相应的外键, 所以只能提前查好Department的信息, 而在查询Department表时, 因为存在Manager_Id, 所以对Department类中的manager字段可以使用延迟加载
+	3. 这就是1-1关联关系和n-1关联关系的一个区别.
+		在n-1中, 比如Order对Customer, Customer类中并没有Order字段, 并且在查询Customer时也不会关联查询Order.而在1-1中, 基于外键映射的1-1, 设定Department表中外键连接Manager, Manager表中
+		没有Department外键, 但是Manager表中有Department字段, 在查询Manager时也会使用左外连接一并查询出Department.
+	4. 基于问题3, 又有一个新问题, 在双向1-n中, 为什么查询1的一端时, 为什么没有一并查询出n的一端, 而是使用的延迟加载, 并且1的一端的类中使用了n的集合字段, 1的表中没有n的外键
+		因为hibernate内置了集合类型, 会在内部管理对应的n端.
+	5. 什么是左外连接查询?
+		例子：   
+		-------------------------------------------------
+		  a表     id   name     b表     id   job   parent_id   
+		        1   张3              1     23     1   
+		        2   李四                          2     34     2   
+		        3   王武                          3     34     4       
+		  a.id同parent_id   存在关系   
+		--------------------------------------------------    
+		 1） 内连接   
+		  select   a.*,b.*   from   a   inner   join   b     on   a.id=b.parent_id       
+		  结果是     
+		  1   张3          1     23     1   
+		  2   李四                  2     34     2   
+		
+		  2）左连接   
+		  select   a.*,b.*   from   a   left   join   b     on   a.id=b.parent_id       
+		  结果是     
+		  1   张3          1     23     1   
+		  2   李四                  2     34     2   
+		  3   王武                  null   
+		
+		 3） 右连接   
+		  select   a.*,b.*   from   a   right   join   b     on   a.id=b.parent_id       
+		  结果是     
+		  1   张3          1     23     1   
+		  2   李四                  2     34     2   
+		  null           3     34     4   
+		
+		 4） 完全连接   
+		  select   a.*,b.*   from   a   full   join   b     on   a.id=b.parent_id   
+		  结果是     
+		  1   张3          1     23     1   
+		  2   李四                  2     34     2   
+		  null           3     34     4   
+		  3   王武                 null
+
+2.基于主键映射的1-1
+	基于主键的映射策略:指一端的主键生成器使用 foreign 策略,表明根据”对方”的主键来生成自己的主键，自己并不能独立生成主键. <param> 子元素指定使用当前持久化类的哪个属性作为 “对方”
+		<id name="id" column="ID" type="integer">
+			<generator class="foreign">
+				<param name="property">manager</param>
+			</generator>
+		</id>
+	采用foreign主键生成器策略的一端增加 one-to-one 元素映射关联属性，其one-to-one属性还应增加 constrained=“true” 属性；另一端增加one-to-one元素映射关联属性。
+	constrained(约束):指定为当前持久化类对应的数据库表的主键添加一个外键约束，引用被关联的对象(“对方”)所对应的数据库表主键
+		<one-to-one
+			name="manager"
+			class="Manager"
+			constrained="true"/>
+	[注意:查询Manager时, 也会使用左外连接查询出Department], 并且有一个注意点:
+		此时在Manager的<one-to-one>中,不再需要设置property-ref="manager"
+		<one-to-one name="dept" class="Department" />
+		因为此时的左外连接查询条件就是 manger.manager_id=department.department_id, 加了property-ref="manager"就会改成manger.manager_id=department.manager_id
+		
+映射n-n关联关系:
+单向 n-n:
+假设现在有两个类, category和item, 它们之间是n-n的关系, 在数据库中需要一张中间表, 该表有两个列, 分别是category和item的id, n-n关联关系必须有一张中间表 
+	n-n 的关联必须使用连接表
+	与 1-n 映射类似，必须为 set 集合元素添加 key 子元素，指定 CATEGORIES_ITEMS 表中参照 CATEGORIES 表的外键为 CATEGORIY_ID. 与 1-n 关联映射不同的是，建立 n-n 关联时, 集合中的元素使用 many-to-many. many-to-many 子元素的 class 属性指定 items 集合中存放的是 Item 对象, column 属性指定  CATEGORIES_ITEMS 表中参照 ITEMS 表的外键为 ITEM_ID
+	<!-- 这段配置放在category中, item中无需额外配置, 因为是单向关联 -->
+	<set name="items" table="CATEGORIES_ITEMS">
+		<key column="CATEGORY_ID"></key>
+		<many-to-many class="Item" column="ITEM_ID" />
+	</set>
+
+双向n-n:
+	双向 n-n 关联需要两端都使用集合属性
+	双向n-n关联必须使用连接表
+	集合属性应增加 key 子元素用以映射外键列, 集合元素里还应增加many-to-many子元素关联实体类
+	在双向 n-n 关联的两边都需指定连接表的表名及外键列的列名. 两个集合元素 set 的 table 元素的值必须指定，而且必须相同。set元素的两个子元素：key 和 many-to-many 都必须指定 column 属性，其中，key 和 many-to-many 分别指定本持久化类和关联类在连接表中的外键列名，因此两边的 key 与 many-to-many 的column属性交叉相同。也就是说，一边的set元素的key的 cloumn值为a,many-to-many 的 column 为b；则另一边的 set 元素的 key 的 column 值 b,many-to-many的 column 值为 a.  
+	对于双向 n-n 关联, 必须把其中一端的 inverse 设置为 true, 否则两端都维护关联关系可能会造成主键冲突.
+
+继承映射:
+	对于面向对象的程序设计语言而言，继承和多态是两个最基本的概念。Hibernate 的继承映射可以理解持久化类之间的继承关系。
+	例如：人和学生之间的关系。学生继承了人，可以认为学生是一个特殊的人，如果对人进行查询，学生的实例也将被得到。
+Hibernate支持三种继承映射策略：
+1.采用 subclass 元素的继承映射
+	采用 subclass 的继承映射可以实现对于继承关系中父类和子类使用同一张表
+	因为父类和子类的实例全部保存在同一个表中，因此需要在该表内增加一列，使用该列来区分每行记录到底是哪个类的实例----这个列被称为辨别者列(discriminator).
+	在这种映射策略下，使用 subclass 来映射子类，使用 class 或 subclass 的 discriminator-value 属性指定辨别者列的值
+	所有子类定义的字段都不能有非空约束。如果为那些字段添加非空约束，那么父类的实例在那些列其实并没有值，这将引起数据库完整性冲突，导致父类的实例无法保存到数据库中
+	<hibernate-mapping package="com.atguigu.hibernate.subclass">
+    <class name="Person" table="PERSONS" discriminator-value="PERSON">
+        <id name="id" type="java.lang.Integer">
+            <column name="ID" />
+            <generator class="native" />
+        </id>
+        <!-- 配置辨别者列 -->
+		<discriminator column="TYPE" type="string"></discriminator>
+        <property name="name" type="java.lang.String">
+            <column name="NAME" />
+        </property>
+        <property name="age" type="int">
+            <column name="AGE" />
+        </property>
+        <!-- 映射子类 Student, 使用 subclass 进行映射 -->
+        <subclass name="Student" discriminator-value="STUDENT">
+        	<property name="school" type="string" column="SCHOOL"></property>
+        </subclass>
+	</class>
+	</hibernate-mapping>
+2.采用 joined-subclass 元素的继承映射
+	采用 joined-subclass 元素的继承映射可以实现每个子类一张表
+	采用这种映射策略时，父类实例保存在父类表中，子类实例由父类表和子类表共同存储。因为子类实例也是一个特殊的父类实例，因此必然也包含了父类实例的属性。于是将子类和父类共有的属性保存在父类表中，子类增加的属性，则保存在子类表中。
+	在这种映射策略下，无须使用鉴别者列，但需要为每个子类使用 key 元素映射共有主键。
+	子类增加的属性可以添加非空约束。因为子类的属性和父类的属性没有保存在同一个表中
+	<hibernate-mapping package="com.atguigu.hibernate.joined.subclass">
+	    <class name="Person" table="PERSONS">
+	        <id name="id" type="java.lang.Integer">
+	            <column name="ID" />
+	            <generator class="native" />
+	        </id>
+	        <property name="name" type="java.lang.String">
+	            <column name="NAME" />
+	        </property>
+	        <property name="age" type="int">
+	            <column name="AGE" />
+	        </property>
+	        <joined-subclass name="Student" table="STUDENTS">
+	        	<key column="STUDENT_id"></key>
+	        	<property name="school" type="string" column="SCHOOL"></property>
+	        </joined-subclass>
+	    </class>
+	</hibernate-mapping>
+3.采用 union-subclass 元素的继承映射
+	采用 union-subclass 元素可以实现将每一个实体对象映射到一个独立的表中。
+	子类增加的属性可以有非空约束 --- 即父类实例的数据保存在父表中，而子类实例的数据保存在子类表中。
+	子类实例的数据仅保存在子类表中, 而在父类表中没有任何记录
+	在这种映射策略下，子类表的字段会比父类表的映射字段要多,因为子类表的字段等于父类表的字段、加子类增加属性的总和
+	在这种映射策略下，既不需要使用鉴别者列，也无须使用 key 元素来映射共有主键.
+	使用 union-subclass 映射策略是不可使用 identity 的主键生成策略, 因为同一类继承层次中所有实体类都需要使用同一个主键种子, 即多个持久化实体对应的记录的主键应该是连续的. 受此影响, 也不该使用 native 主键生成策略, 因为 native 会根据数据库来选择使用 identity 或 sequence.
+	<hibernate-mapping package="com.atguigu.hibernate.union.subclass">
+	    <class name="Person" table="PERSONS">
+	        <id name="id" type="java.lang.Integer">
+	            <column name="ID" />
+	            <generator class="hilo" />
+	        </id>
+	        <property name="name" type="java.lang.String">
+	            <column name="NAME" />
+	        </property>
+	        <property name="age" type="int">
+	            <column name="AGE" />
+	        </property>
+	        <!-- 不再需要设置外键key -->
+			<union-subclass name="Student" table="STUDENTS">
+				<property name="school" column="SCHOOL" type="string"></property>
+			</union-subclass>        
+	    </class>
+	</hibernate-mapping>
+	
+Hibernate 检索策略:
+检索数据时的 2 个问题：
+	不浪费内存：当 Hibernate 从数据库中加载 Customer 对象时, 如果同时加载所有关联的 Order 对象, 而程序实际上仅仅需要访问 Customer 对象, 那么这些关联的 Order 对象就白白浪费了许多内存.
+	更高的查询效率：发送尽可能少的 SQL 语句
+
+类级别的检索策略:
+	类级别可选的检索策略包括立即检索和延迟检索, 默认为延迟检索
+		立即检索: 立即加载检索方法指定的对象
+		延迟检索: 延迟加载检索方法指定的对象。在使用具体的属性时，再进行加载
+	类级别的检索策略可以通过 <class> 元素的 lazy 属性进行设置
+	如果程序加载一个对象的目的是为了访问它的属性, 可以采取立即检索. 
+	如果程序加载一个持久化对象的目的是仅仅为了获得它的引用, 可以采用延迟检索。注意出现懒加载异常！
+	无论 <class> 元素的 lazy 属性是 true 还是 false, Session 的 get() 方法及 Query 的 list() 方法在类级别总是使用立即检索策略
+	若 <class> 元素的 lazy 属性为 true 或取默认值, Session 的 load() 方法不会执行查询数据表的 SELECT 语句, 仅返回代理类对象的实例, 该代理类实例有如下特征:
+		由 Hibernate 在运行时采用 CGLIB 工具动态生成
+		Hibernate 创建代理类实例时, 仅初始化其 OID 属性
+		在应用程序第一次访问代理类实例的非 OID 属性时, Hibernate 会初始化代理类实例
+
+一对多和多对多的检索策略:
+在映射文件中, 用 <set> 元素来配置一对多关联及多对多关联关系. <set> 元素有 lazy 和 fetch 属性
+	lazy: 主要决定 orders 集合被初始化的时机. 即到底是在加载 Customer 对象时就被初始化, 还是在程序访问 orders 集合时被初始化
+	fetch: 取值为 “select” 或 “subselect” 时, 决定初始化 orders 的查询语句的形式;  若取值为”join”, 则决定 orders 集合被初始化的时机
+	若把 fetch 设置为 “join”, lazy 属性将被忽略
+	当 fetch 属性为 “subselect” 时
+		假定 Session 缓存中有 n 个 orders 集合代理类实例没有被初始化, Hibernate 能够通过带子查询(select语句中包含select)的 select 语句, 来批量初始化 n 个 orders 集合代理类实例
+		batch-size 属性将被忽略
+		子查询中的 select 语句为查询 CUSTOMERS 表 OID 的 SELECT 语句
+	当fetch设置为join:
+		检索 Customer 对象时, 会采用迫切左外连接(通过左外连接加载与检索指定的对象关联的对象)策略来检索所有关联的 Order 对象
+		lazy 属性将被忽略
+		Query 的list() 方法会忽略映射文件中配置的迫切左外连接检索策略, 而依旧采用延迟加载策略
+	<set> 元素的 batch-size 属性：用来为延迟检索策略或立即检索策略设定批量检索的数量. 批量检索能减少 SELECT 语句的数目, 提高延迟检索或立即检索的运行性能. 
+
+延迟检索和增强延迟检索:
+	在延迟检索(lazy 属性值为 true) 集合属性时, Hibernate 在以下情况下初始化集合代理类实例 
+		应用程序第一次访问集合属性: iterator(), size(), isEmpty(), contains() 等方法
+		通过 Hibernate.initialize() 静态方法显式初始化
+	增强延迟检索(lazy 属性为 extra): 与 lazy=“true” 类似. 主要区别是增强延迟检索策略能进一步延迟 Customer 对象的 orders 集合代理实例的初始化时机：
+		当程序第一次访问 orders 属性的 iterator() 方法时, 会导致 orders 集合代理类实例的初始化
+		当程序第一次访问 order 属性的 size(), contains() 和 isEmpty() 方法时, Hibernate 不会初始化 orders 集合类的实例, 仅通过特定的 select 语句查询必要的信息, 不会检索所有的 Order 对象
+
+<set> 元素的 batch-size 属性:
+<set> 元素有一个 batch-size 属性, 用来为延迟检索策略或立即检索策略设定批量检索的数量. 批量检索能减少 SELECT 语句的数目, 提高延迟检索或立即检索的运行性能. 
+
+多对一和一对一关联的检索策略:
+	和 <set> 一样, <many-to-one> 元素也有一个 lazy 属性和 fetch 属性.
+	若 fetch 属性设为 join, 那么 lazy 属性被忽略
+	迫切左外连接检索策略的优点在于比立即检索策略使用的 SELECT 语句更少. 
+	无代理延迟检索需要增强持久化类的字节码才能实现
+
+Hibernate 提供了以下几种检索对象的方式:
+	导航对象图检索方式:  根据已经加载的对象导航到其他对象
+	OID 检索方式:  按照对象的 OID 来检索对象
+	HQL 检索方式: 使用面向对象的 HQL 查询语言
+	QBC 检索方式: 使用 QBC(Query By Criteria) API 来检索对象. 这种 API 封装了基于字符串形式的查询语句, 提供了更加面向对象的查询接口. 
+	本地 SQL 检索方式: 使用本地数据库的 SQL 查询语句
+
+HQL 检索方式:
+HQL(Hibernate Query Language) 是面向对象的查询语言, 它和 SQL 查询语言有些相似. 在 Hibernate 提供的各种检索方式中, HQL 是使用最广的一种检索方式. 它有如下功能:
+	在查询语句中设定各种查询条件
+	支持投影查询, 即仅检索出对象的部分属性
+	支持分页查询
+	支持连接查询
+	支持分组查询, 允许使用 HAVING 和 GROUP BY 关键字
+	提供内置聚集函数, 如 sum(), min() 和 max()
+	支持子查询
+	支持动态绑定参数
+	能够调用 用户定义的 SQL 函数或标准的 SQL 函数
+HQL 检索方式包括以下步骤:
+	通过 Session 的 createQuery() 方法创建一个 Query 对象, 它包括一个 HQL 查询语句. HQL 查询语句中可以包含命名参数
+	动态绑定参数
+	调用 Query 相关方法执行查询语句. 
+Qurey 接口支持方法链编程风格, 它的 setXxx() 方法返回自身实例, 而不是 void 类型
+HQL vs SQL:
+	HQL 查询语句是面向对象的, Hibernate 负责解析 HQL 查询语句, 然后根据对象-关系映射文件中的映射信息, 把 HQL 查询语句翻译成相应的 SQL 语句. 
+	❤❤ HQL 查询语句中的主体是域模型中的类及类的属性
+	SQL 查询语句是与关系数据库绑定在一起的. ❤❤ SQL 查询语句中的主体是数据库表及表的字段. 
+
+绑定参数:
+	Hibernate 的参数绑定机制依赖于 JDBC API 中的 PreparedStatement 的预定义 SQL 语句功能.
+	HQL 的参数绑定由两种形式:
+		按参数名字绑定: 在 HQL 查询语句中定义命名参数, 命名参数以 “:” 开头.
+		按参数位置绑定: 在 HQL 查询语句中用 “?” 来定义参数位置
+	相关方法:
+		setEntity(): 把参数与一个持久化类绑定
+		setParameter(): 绑定任意类型的参数. 该方法的第三个参数显式指定 Hibernate 映射类型
+HQL 采用 ORDER BY 关键字对查询结果排序
+
+分页查询:
+	setFirstResult(int firstResult): 设定从哪一个对象开始检索, 参数 firstResult 表示这个对象在查询结果中的索引位置, 索引位置的起始值为 0. 默认情况下, Query 从查询结果中的第一个对象开始检索
+	setMaxResults(int maxResults): 设定一次最多检索出的对象的数目. 在默认情况下, Query 和 Criteria 接口检索出查询结果中所有的对象
+
+在映射文件中定义命名查询语句
+	Hibernate 允许在映射文件中定义字符串形式的查询语句. 
+	<query> 元素用于定义一个 HQL 查询语句, 它和 <class> 元素并列. 
+		<query name="findNewsByTitle">
+			<![CDATA[
+				FROM News n WHERE n.title LIKE :title
+			]]>
+		</query>
+	在程序中通过 Session 的 getNamedQuery() 方法获取查询语句对应的 Query 对象. 
+
+投影查询：
+	投影查询: 查询结果仅包含实体的部分属性. 通过 SELECT 关键字实现.
+	Query 的 list() 方法返回的集合中包含的是数组类型的元素, 每个对象数组代表查询结果的一条记录
+	可以在持久化类中定义一个对象的构造器来包装投影查询返回的记录, 使程序代码能完全运用面向对象的语义来访问查询结果集. 
+	可以通过 DISTINCT 关键字来保证查询结果不会返回重复元素
+
+报表查询：
+	报表查询用于对数据分组和统计, 与 SQL 一样, HQL 利用 GROUP BY 关键字对数据分组, 用 HAVING 关键字对分组数据设定约束条件.
+	在 HQL 查询语句中可以调用以下聚集函数
+		count()
+		min()
+		max()
+		sum()
+		avg()
+
+HQL (迫切)左外连接：
+迫切左外连接:
+	LEFT JOIN FETCH 关键字表示迫切左外连接检索策略.
+	list() 方法返回的集合中存放实体对象的引用, 每个 Department 对象关联的 Employee  集合都被初始化, 存放所有关联的 Employee 的实体对象. 
+	查询结果中可能会包含重复元素, 可以通过一个 HashSet 来过滤重复元素
+左外连接:
+	LEFT JOIN 关键字表示左外连接查询. 
+	list() 方法返回的集合中存放的是对象数组类型
+	根据配置文件来决定 Employee 集合的检索策略. 
+	如果希望 list() 方法返回的集合中仅包含 Department 对象, 可以在HQL 查询语句中使用 SELECT 关键字
