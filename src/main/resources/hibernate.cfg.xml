@@ -15,7 +15,7 @@
     	
     	<!-- 配置hibernate基本信息 -->
     	<!-- hibernate数据库所使用的方言 所有取值 http://blog.csdn.net/gz153016/article/details/48895899 -->
-    	<property name="dialect">org.hibernate.dialect.MySQLDialect</property>
+    	<property name="dialect">org.hibernate.dialect.MySQL5Dialect</property>
     	
     	<!-- 执行操作时是否在控制台打印SQL -->
     	<property name="show_sql">true</property>
