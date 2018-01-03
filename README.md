@@ -1,4 +1,2 @@
 ## Hibernate
-一个Java平台的ORM框架
-
-eclipse插件: JBoss Tools -> hibenateTools
+Hibernate 使用参考
