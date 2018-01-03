@@ -1,3 +1,3 @@
-## Hibernate
-Hibernate 使用参考  
+## Hibernate  
+
 eclipse插件: hibernate-tools
